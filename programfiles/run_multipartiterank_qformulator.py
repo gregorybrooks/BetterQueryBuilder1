@@ -210,7 +210,7 @@ def main():
     ############
     ### write the formulated quereis into the output path
     ############ 
-    write_topics(final_topics_all, args.output_file)
+    write_topics(final_topics_all, args.output_file + ".queries.json")
     
 
 if __name__ == "__main__":
