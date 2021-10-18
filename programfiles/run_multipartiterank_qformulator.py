@@ -42,7 +42,7 @@ def construct_galago_query(keywords_with_score, QT_obejct, out_lang='en', combin
     words_str = ''
     phrase_index = 0
     for score, phrase in keywords_with_score:
-        if out_lang=='ar':
+        if out_lang=='ARABIC' or out_lang=='FARSI':
             wrapped_phrase = QT_obejct.tranlate_phrase_sdm_syn(phrase, tran_top_k=2, trans_type='tt_syn_op')
         else:
             wrapped_phrase = _wrap_opt_phrase(phrase, combine_opt)
@@ -81,7 +81,7 @@ def main():
     
     parser.add_argument('--input_file', type=str, default='analytic_tasks.json', help='the file path of analytic_tasks.json file ')
     parser.add_argument('--output_file', type=str, default='test.queries.json', help='the file path for galago queries that this program would write into')
-    parser.add_argument('--out_lang', type=str, default='ar', help='what language should it translate the queries')
+    parser.add_argument('--out_lang', type=str, default='ARABIC', help='what language should it translate the queries')
     parser.add_argument('--program_directory', type=str, default='.', help='parent directory of translation_package and translation_tables')
     parser.add_argument('--mode', type=str, default='AUTO', help='AUTO, AUTO-HITL, or HITL')
     parser.add_argument('--phase', type=str, default='Request', help='Request or Task')
@@ -92,8 +92,11 @@ def main():
     
     args = parser.parse_args()
     print(f"arguments are received {args}")
-    
-    tt_path = args.program_directory + "translation_tables/unidirectional-with-null-en-ar.simple-tok.txt"
+
+    if args.out_lang=='ARABIC':
+        tt_path = args.program_directory + "translation_tables/unidirectional-with-null-en-ar.simple-tok.txt"
+    elif args.out_lang=='FARSI':
+        tt_path = args.program_directory + "translation_tables/en-fa-3-col-ttable-no-normal.txt"
     muse_en_path = args.program_directory + "translation_package/muse/wiki.multi.en.vec"
     muse_ar_path = args.program_directory + "translation_package/muse/wiki.multi.ar.vec"
 
@@ -101,17 +104,15 @@ def main():
     ### Translation Module Loading
     ############
     myQT = None
-    if args.out_lang=='ar':
+    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
         myQT = GalagoQT(tt_dir=tt_path, emb_src_path=muse_en_path, emb_tgt_path=muse_ar_path)
-    
     
     ############
     ### Extract Keywords & Formualte & Translate
     ############ 
     with open(args.input_file, 'r') as f:
         eng_dry_run = json.load(f)
-    
-    
+
     final_topics_all = {}
     cur_kw_extractor = 'pke-usup-MultipartiteRank'
     cur_formulate_op = 'sdm'
@@ -126,7 +127,7 @@ def main():
             if task['task-title'] is not None:
                 task_title = task['task-title'].strip()
                 if len(task_title)>3:
-                    if args.out_lang=='ar':
+                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
                         cur_task_galago_query = myQT.tranlate_phrase_sdm_syn(task_title, tran_top_k=2, trans_type='tt_syn_op')
                     else:
                         cur_task_galago_query = _wrap_opt_phrase(task_title, combine_opt=cur_formulate_op) 
@@ -136,7 +137,7 @@ def main():
             if task['task-stmt'] is not None:
                 task_stmt = task['task-stmt'].strip()
                 if len(task_stmt)>3:
-                    if args.out_lang=='ar':
+                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
                         cur_task_galago_query = myQT.tranlate_phrase_sdm_syn(task_stmt, tran_top_k=2, trans_type='tt_syn_op')
                     else:
                         cur_task_galago_query = _wrap_opt_phrase(task_stmt, combine_opt=cur_formulate_op) 
@@ -146,7 +147,7 @@ def main():
             if task['task-narr'] is not None:
                 task_narr = task['task-narr'].strip()
                 if len(task_narr)>3:
-                    if args.out_lang=='ar':
+                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
                         cur_task_galago_query = myQT.tranlate_phrase_sdm_syn(task_narr, tran_top_k=2, trans_type='tt_syn_op')
                     else:
                         cur_task_galago_query = _wrap_opt_phrase(task_narr, combine_opt=cur_formulate_op) 
@@ -184,7 +185,7 @@ def main():
             cur_req_highlights = [req_docs[req_doc_id].get('highlight', '').strip() for req_doc_id in req_doc_ids]
             cur_req_hl_text = ' '.join(cur_req_highlights)
             if len(cur_req_hl_text.strip())>3:
-                if args.out_lang=='ar':
+                if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
                     cur_req_hl_galago_query = myQT.tranlate_phrase_sdm_syn(cur_req_hl_text, tran_top_k=2, trans_type='tt_syn_op')
                 else:
                     cur_req_hl_galago_query = _wrap_opt_phrase(cur_req_hl_text, combine_opt=cur_formulate_op) 
@@ -196,7 +197,7 @@ def main():
                 if req_obj['req-text'] is not None:
                     cur_req_text = req_obj['req-text'].strip()
                     if len(cur_req_text)>3:
-                        if args.out_lang=='ar':
+                        if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
                             cur_req_text_galago_query = myQT.tranlate_phrase_sdm_syn(cur_req_text, tran_top_k=2, trans_type='tt_syn_op')
                         else:
                             cur_req_text_galago_query = _wrap_opt_phrase(cur_req_text, combine_opt=cur_formulate_op) 
