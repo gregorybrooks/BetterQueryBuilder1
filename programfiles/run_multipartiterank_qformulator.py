@@ -96,7 +96,8 @@ def main():
     if args.out_lang=='ARABIC':
         tt_path = args.program_directory + "translation_tables/unidirectional-with-null-en-ar.simple-tok.txt"
     elif args.out_lang=='FARSI':
-        tt_path = args.program_directory + "translation_tables/en-fa-3-col-ttable-no-normal.txt"
+#        tt_path = args.program_directory + "translation_tables/en-fa-3-col-ttable-no-normal.txt"
+        tt_path = args.program_directory + "translation_tables/CCAligned.en-fa.fw.actual.ti.final"
     muse_en_path = args.program_directory + "translation_package/muse/wiki.multi.en.vec"
     muse_ar_path = args.program_directory + "translation_package/muse/wiki.multi.ar.vec"
 
