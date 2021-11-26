@@ -129,8 +129,8 @@ class GalagoQT:
         for line in lines:
             # '"\tإليه\t4.47296e-05\n' -> ['en_term', 'ar_term', '0.458949']
             #line = remove_puncuations(line)
-#            line_splitted = line.strip().split('\t')   # ISI tables use tab
-            line_splitted = line.strip().split()   # any whitespace
+            line_splitted = line.strip().split('\t')   # ISI tables use tab
+#            line_splitted = line.strip().split()   # any whitespace - Zhiqi tables use 1 space as field separator
             if len(line_splitted)==3:
                 src_token = self.remove_puncuations(line_splitted[0])
                 tgt_token = self.remove_puncuations(line_splitted[1].replace('\t', ''))
@@ -175,12 +175,17 @@ class GalagoQT:
     2. remove stopwords 
     """
     def spacy_english_tokenizer_and_cleaner(self, text):
+#        print("************")
+#        print(text)
+#        print("****")
         doc = self.eng_nlp(text.replace('#', ' '))  # phrase to tokenize
         eng_stopwords = self.eng_nlp.Defaults.stop_words
-#        text_tokens_clean = ' '.join([w.text.lower() for w in doc if not w.text.lower() in eng_stopwords])
+        text_tokens_clean = ' '.join([w.text.lower() for w in doc if not w.text.lower() in eng_stopwords])
 # ISI tables require lowercasing, but Zhiqi tables do not
-        text_tokens_clean = ' '.join([w.text for w in doc if not w.text in eng_stopwords])
+#        text_tokens_clean = ' '.join([w.text for w in doc if not w.text in eng_stopwords])
         final_tokens = text_tokens_clean.translate(str.maketrans('', '', string.punctuation))
+ #       print(final_tokens)
+ #       print("************")
         return final_tokens.split()
     
     

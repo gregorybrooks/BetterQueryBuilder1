@@ -10,6 +10,9 @@ import re
 Runs PKE library with the given unsupervised model and returns the extracted keywords and their weights
 """
 def pke_unsupervised(cur_text, top_k, kw_extractor, lang='en', document_frequency_file=None):
+#    print("********************")
+#    print("Before get keyphrases:")
+#    print(cur_text)
     arg_tokens = kw_extractor.split('-')
     extractor = getattr(pke.unsupervised, arg_tokens[-1])()
     extractor.load_document(input=cur_text, language=lang)
@@ -21,6 +24,12 @@ def pke_unsupervised(cur_text, top_k, kw_extractor, lang='en', document_frequenc
         extractor.candidate_weighting()
     keyphrases = extractor.get_n_best(n=top_k)
     final_kw = [(score, term)  for term, score in keyphrases]
+#    print("After get keyphrases:")
+#    t = ''
+#    for score, phrase in final_kw:
+#        t += ' ' + phrase
+#    print(t)
+#    print("********************")
     return final_kw
 
 """
@@ -96,8 +105,8 @@ def main():
     if args.out_lang=='ARABIC':
         tt_path = args.program_directory + "translation_tables/unidirectional-with-null-en-ar.simple-tok.txt"
     elif args.out_lang=='FARSI':
-#        tt_path = args.program_directory + "translation_tables/en-fa-3-col-ttable-no-normal.txt"
-        tt_path = args.program_directory + "translation_tables/CCAligned.en-fa.fw.actual.ti.final"
+        tt_path = args.program_directory + "translation_tables/en-fa-3-col-ttable-no-normal.txt"  # ISI
+#        tt_path = args.program_directory + "translation_tables/CCAligned.en-fa.fw.actual.ti.final"  # Zhiqi's
     muse_en_path = args.program_directory + "translation_package/muse/wiki.multi.en.vec"
     muse_ar_path = args.program_directory + "translation_package/muse/wiki.multi.ar.vec"
 
