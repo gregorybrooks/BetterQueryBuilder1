@@ -12,8 +12,9 @@ This class loads an arabic Translation Table (similar to ISI provided) and also 
 can return different varieties of translated galago queries
 """
 class GalagoQT:
-    def __init__(self, tt_dir, emb_src_path=None, emb_tgt_path=None):
+    def __init__(self, tt_dir, emb_src_path=None, emb_tgt_path=None, search_engine="galago"):
         self.eng_nlp = spacy.load("en_core_web_sm")
+        self.search_engine = search_engine
         
         # loading the translation table 
         self.tt_dict = self._load_translation_dict(tt_dir)
@@ -47,6 +48,8 @@ class GalagoQT:
     def tranlate_phrase_sdm_syn(self, ph_txt, tran_top_k, trans_type='tt_syn_op'):
         self.trace("GalagoQT: tranlate_phrase_sdm_syn")
         self.trace(ph_txt)
+        if self.search_engine == 'anserini':
+            tran_top_k = 1   # TEMP - OVERRIDE TO ELIMINATE SYNONYMS
         kw_tokens = self.spacy_english_tokenizer_and_cleaner(ph_txt)
         self.trace('back from self.spacy_english_tokenizer_and_cleaner')
         wrapped_kw = ''
@@ -69,7 +72,10 @@ class GalagoQT:
                 q_trans_tokens = [token for score, token in q_trans_tokens]
                 if len(q_trans_tokens)>1:
                     self.trace('wrapping it with synonym')
-                    wrapped_trans = f"#synonym({' '.join(q_trans_tokens)})"
+                    if self.search_engine == 'galago':
+                        wrapped_trans = f"#synonym({' '.join(q_trans_tokens)})"
+                    else:
+                        wrapped_trans = f"{' '.join(q_trans_tokens)}" # no syn operator
                     self.trace('finished wrapping it with synonym')
                 else:
                     self.trace('joining it')
@@ -79,7 +85,10 @@ class GalagoQT:
 
             if len(kw_tokens_translations)>1:
                 self.trace('wrapping it with sdm')
-                wrapped_kw = f"#sdm({' '.join(kw_tokens_translations)})"
+                if self.search_engine == 'galago':
+                    wrapped_kw = f"#sdm({' '.join(kw_tokens_translations)})"
+                else:
+                    wrapped_kw = f"{' '.join(kw_tokens_translations)}"  # no sdm operator
                 self.trace('finished wrapping it with sdm')
             else:
                 self.trace('final joining')

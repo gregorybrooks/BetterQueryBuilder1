@@ -35,23 +35,27 @@ def pke_unsupervised(cur_text, top_k, kw_extractor, lang='en', document_frequenc
 """
 Writes galago format json queries into the given output path
 """
-def write_topics(topics_all, topics_path_out):
-    my_galago_topics_list = []
-    for qnum, qtxt in topics_all.items():
-        my_cur_topic_dict = {"number":qnum, "text":qtxt}
-        my_galago_topics_list.append(my_cur_topic_dict)
-    my_galago_topics_json = {'queries':my_galago_topics_list}
-    with open(topics_path_out, 'w', encoding='utf-8') as f:
-        json.dump(my_galago_topics_json, f, ensure_ascii=False, indent=4)
+def write_topics(topics_all, topics_path_out, search_engine):
+    if search_engine == 'galago':
+         my_galago_topics_list = []
+         for qnum, qtxt in topics_all.items():
+             my_cur_topic_dict = {"number":qnum, "text":qtxt}
+             my_galago_topics_list.append(my_cur_topic_dict)
+         my_galago_topics_json = {'queries':my_galago_topics_list}
+         with open(topics_path_out, 'w', encoding='utf-8') as f:
+             json.dump(my_galago_topics_json, f, ensure_ascii=False, indent=4)
+    else:
+         with open(topics_path_out, 'w', encoding='utf-8') as f:
+             for qnum, qtxt in topics_all.items():
+                f.write(qnum + "\t" + qtxt + "\n")
 
-        
 
-def construct_galago_query(keywords_with_score, QT_obejct, out_lang='en', combine_opt='sdm'): # combine or sdm
+def construct_galago_query(keywords_with_score, QT_obejct, out_lang='en', combine_opt='sdm', search_engine='galago'): # combine or sdm
     weights_str = '#combine'
     words_str = ''
     phrase_index = 0
     for score, phrase in keywords_with_score:
-        if out_lang=='ARABIC' or out_lang=='FARSI':
+        if out_lang=='ARABIC' or out_lang=='FARSI' or out_lang=='RUSSIAN':
             wrapped_phrase = QT_obejct.tranlate_phrase_sdm_syn(phrase, tran_top_k=2, trans_type='tt_syn_op')
         else:
             wrapped_phrase = _wrap_opt_phrase(phrase, combine_opt)
@@ -59,10 +63,14 @@ def construct_galago_query(keywords_with_score, QT_obejct, out_lang='en', combin
             words_str += ' ' + wrapped_phrase
             weights_str += f':{phrase_index}={score}'
             phrase_index+=1
-    final_query = f"{weights_str}({words_str})"
+    if search_engine == 'galago':
+        final_query = f"{weights_str}({words_str})"
+    else:
+        final_query = f"{words_str}"
     return final_query
 
-def construct_galago_query_no_phrasing(keywords_with_score):
+
+def construct_galago_query_no_phrasing(keywords_with_score, search_engine):
     weights_str = '#combine'
     words_str = ''
     phrase_index = 0
@@ -72,7 +80,10 @@ def construct_galago_query_no_phrasing(keywords_with_score):
             words_str += ' ' + wrapped_phrase
             weights_str += f':{phrase_index}={score}'
             phrase_index+=1
-    final_query = f"{weights_str}({words_str})"
+    if search_engine == 'galago':
+        final_query = f"{weights_str}({words_str})"
+    else:
+        final_query = f"{words_str}"
     return final_query
 
 
@@ -80,7 +91,7 @@ def _wrap_opt_phrase(text, combine_opt='sdm'):
     mytext = re.sub(r"[.,$\(\):;!?\"‘’]|'s\b", "", text).strip()
     tokens = mytext.split()
     if len(tokens)>1:
-        return f"#{combine_opt}({mytext})"
+        return f"#{mytext}"
     else:
         return mytext
 
@@ -93,6 +104,7 @@ def main():
     parser.add_argument('--out_lang', type=str, default='ARABIC', help='what language should it translate the queries')
     parser.add_argument('--program_directory', type=str, default='.', help='parent directory of translation_package and translation_tables')
     parser.add_argument('--mode', type=str, default='AUTO', help='AUTO, AUTO-HITL, or HITL')
+    parser.add_argument('--search_engine', type=str, default='galago', help='galago or anserini')
     parser.add_argument('--phase', type=str, default='Request', help='Request or Task')
 
 #    parser.add_argument('--tt_path', type=str, default='', help='path to the isi translation table of arabic to english ')
@@ -102,8 +114,12 @@ def main():
     args = parser.parse_args()
     print(f"arguments are received {args}")
 
+    search_engine = args.search_engine
+
     if args.out_lang=='ARABIC':
         tt_path = args.program_directory + "translation_tables/unidirectional-with-null-en-ar.simple-tok.txt"
+    elif args.out_lang=='RUSSIAN':
+        tt_path = args.program_directory + "translation_tables/berk-v0.2-ttables-en-ru.txt"
     elif args.out_lang=='FARSI':
         tt_path = args.program_directory + "translation_tables/en-fa-3-col-ttable-no-normal.txt"  # ISI
 #        tt_path = args.program_directory + "translation_tables/CCAligned.en-fa.fw.actual.ti.final"  # Zhiqi's
@@ -114,8 +130,8 @@ def main():
     ### Translation Module Loading
     ############
     myQT = None
-    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
-        myQT = GalagoQT(tt_dir=tt_path, emb_src_path=muse_en_path, emb_tgt_path=muse_ar_path)
+    if args.out_lang=='ARABIC' or args.out_lang=='FARSI' or args.out_lang=='RUSSIAN':
+        myQT = GalagoQT(tt_dir=tt_path, emb_src_path=muse_en_path, emb_tgt_path=muse_ar_path, search_engine=search_engine)
     
     ############
     ### Extract Keywords & Formualte & Translate
@@ -137,7 +153,7 @@ def main():
             if task['task-title'] is not None:
                 task_title = task['task-title'].strip()
                 if len(task_title)>3:
-                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
+                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI' or args.out_lang=='RUSSIAN':
                         cur_task_galago_query = myQT.tranlate_phrase_sdm_syn(task_title, tran_top_k=2, trans_type='tt_syn_op')
                     else:
                         cur_task_galago_query = _wrap_opt_phrase(task_title, combine_opt=cur_formulate_op) 
@@ -147,7 +163,7 @@ def main():
             if task['task-stmt'] is not None:
                 task_stmt = task['task-stmt'].strip()
                 if len(task_stmt)>3:
-                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
+                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI' or args.out_lang=='RUSSIAN':
                         cur_task_galago_query = myQT.tranlate_phrase_sdm_syn(task_stmt, tran_top_k=2, trans_type='tt_syn_op')
                     else:
                         cur_task_galago_query = _wrap_opt_phrase(task_stmt, combine_opt=cur_formulate_op) 
@@ -157,7 +173,7 @@ def main():
             if task['task-narr'] is not None:
                 task_narr = task['task-narr'].strip()
                 if len(task_narr)>3:
-                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
+                    if args.out_lang=='ARABIC' or args.out_lang=='FARSI' or args.out_lang=='RUSSIAN':
                         cur_task_galago_query = myQT.tranlate_phrase_sdm_syn(task_narr, tran_top_k=2, trans_type='tt_syn_op')
                     else:
                         cur_task_galago_query = _wrap_opt_phrase(task_narr, combine_opt=cur_formulate_op) 
@@ -170,11 +186,16 @@ def main():
         cur_task_content = [task_docs[task_doc_id]['doc-text'] for task_doc_id in task_doc_ids]
         cur_task_text = ' '.join(cur_task_content)
         extracted_kws = pke_unsupervised(cur_task_text, kw_top_k, cur_kw_extractor)
-        cur_task_galago_query = construct_galago_query(extracted_kws, myQT, args.out_lang, combine_opt=cur_formulate_op)
+        cur_task_galago_query = construct_galago_query(extracted_kws, myQT, args.out_lang, combine_opt=cur_formulate_op,
+                                                       search_engine=search_engine)
         
         if len(task_misc)>0:
-            task_misc_galago_query = f"#combine( {' '.join(task_misc)} )"
-            cur_task_galago_query = f'#combine:0=0.8:1=0.2( {cur_task_galago_query} {task_misc_galago_query} )'
+            if search_engine == 'galago':
+                task_misc_galago_query = f"#combine( {' '.join(task_misc)} )"
+                cur_task_galago_query = f'#combine:0=0.8:1=0.2( {cur_task_galago_query} {task_misc_galago_query} )'
+            else:
+                task_misc_galago_query = f" {' '.join(task_misc)} "
+                cur_task_galago_query = f' {cur_task_galago_query} {task_misc_galago_query} '
 
         for req_obj in task['requests']: #'req-docs', 'req-text', 'req-num'
             req_num = req_obj['req-num']
@@ -188,40 +209,39 @@ def main():
             cur_req_content = [req_docs[req_doc_id]['doc-text'] for req_doc_id in req_doc_ids]
             cur_req_doc_text = ' '.join(cur_req_content)
             extracted_kws_req = pke_unsupervised(cur_req_doc_text, kw_top_k, cur_kw_extractor, lang='en')
-            cur_req_galago_query = construct_galago_query(extracted_kws_req, myQT, args.out_lang, combine_opt=cur_formulate_op)
+            cur_req_galago_query = construct_galago_query(extracted_kws_req, myQT, args.out_lang, combine_opt=cur_formulate_op,
+                                                          search_engine=search_engine)
             final_req_query_parts.append((0.33, cur_req_galago_query))
 
             # construct highlight part query (if exists)
             cur_req_highlights = [req_docs[req_doc_id].get('highlight', '').strip() for req_doc_id in req_doc_ids]
             cur_req_hl_text = ' '.join(cur_req_highlights)
             if len(cur_req_hl_text.strip())>3:
-                if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
+                if args.out_lang=='ARABIC' or args.out_lang=='FARSI' or args.out_lang=='RUSSIAN':
                     cur_req_hl_galago_query = myQT.tranlate_phrase_sdm_syn(cur_req_hl_text, tran_top_k=2, trans_type='tt_syn_op')
                 else:
                     cur_req_hl_galago_query = _wrap_opt_phrase(cur_req_hl_text, combine_opt=cur_formulate_op) 
                 final_req_query_parts.append((0.33, cur_req_hl_galago_query))
-                    
-            
+
             # extract req-text (if exists)
             if 'req-text' in req_obj:
                 if req_obj['req-text'] is not None:
                     cur_req_text = req_obj['req-text'].strip()
                     if len(cur_req_text)>3:
-                        if args.out_lang=='ARABIC' or args.out_lang=='FARSI':
+                        if args.out_lang=='ARABIC' or args.out_lang=='FARSI' or args.out_lang=='RUSSIAN':
                             cur_req_text_galago_query = myQT.tranlate_phrase_sdm_syn(cur_req_text, tran_top_k=2, trans_type='tt_syn_op')
                         else:
                             cur_req_text_galago_query = _wrap_opt_phrase(cur_req_text, combine_opt=cur_formulate_op) 
                         final_req_query_parts.append((0.33, cur_req_text_galago_query))
-            
-            
+
              # construct the final query that consists of each of task, query, and highlight 
-            cur_req_final_galago_query = construct_galago_query_no_phrasing(final_req_query_parts)
+            cur_req_final_galago_query = construct_galago_query_no_phrasing(final_req_query_parts, search_engine)
             final_topics_all[req_num] = cur_req_final_galago_query
 
     ############
     ### write the formulated quereis into the output path
     ############ 
-    write_topics(final_topics_all, args.output_file + ".queries.json")
+    write_topics(final_topics_all, args.output_file + ".queries.json", search_engine)
     
 
 if __name__ == "__main__":
