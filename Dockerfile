@@ -46,7 +46,9 @@ RUN pip3 install Cython
 RUN pip3 install blis
 RUN pip3 install spacy
 RUN pip3 install scipy
-RUN BLIS_REALLY_COMPILE=1 pip3 install git+https://github.com/boudinfl/pke.git
+RUN SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=False pip3 install sklearn
+RUN SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=False BLIS_REALLY_COMPILE=1 pip3 install git+https://github.com/boudinfl/pke.git
+#RUN BLIS_REALLY_COMPILE=1 pip3 install git+https://github.com/boudinfl/pke.git
 RUN pip3 install arabic_reshaper
 RUN pip3 install nltk
 RUN pip3 install sentencepiece
